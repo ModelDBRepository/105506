@@ -1,0 +1,69 @@
+Macro Dual_sensor_model_OK()
+Variable i=0,n=6000,Ca,alpha,beta,delta,gama,rou,dT=0.02*10^(-3),j=1,b,base,gama2
+Variable  X_th=3000		//RRP
+String/G SW
+PauseUpdate;  
+Silent 1
+Make/O/N=6000 X_Ca1, X_Ca2, X_Ca3, X_Ca4, X_Ca5, XX_Ca5, syt2=0, X_Time, Fuse=0, Fused=0, peakrate=0, peak_delay=0, Ca_i=0, Y_Ca1, Y_Ca2, yALPHA, yBETA
+
+Yalpha=2.94e+06
+Ybeta=130
+alpha=1.53e+08			//set to 0 in KO
+beta=5800			//set to 0 in KO
+
+gama=6000
+gama2=6000
+b=0.25
+
+Ca=0
+do
+	syt2=X_th
+	X_Ca1[0]=0
+	X_Ca2[0]=0
+	X_Ca3[0]=0
+	X_Ca4[0]=0
+	X_Ca5[0]=0
+	XX_Ca5[0]=0
+	X_Time[0]=0
+
+	i=0
+	do
+		i+=1
+		if (i>1000)
+			Ca=(j)*0.01*10^(-6)
+			if (j>10)
+				Ca=(j-10)*0.1*10^(-6)
+			endif
+			if (j>20)
+				Ca=(j-20)*1*10^(-6)
+			endif
+
+//ca=waveform_ca[i]		//for single photolysis trace fitting
+
+		else
+			Ca=0
+		endif
+		X_Time[i]=i*dT
+X_Ca1[i]=X_Ca1[i-1]+dT*(Ca*5*alpha*syt2[i-1]-beta*X_Ca1[i-1]+2*beta*b*X_Ca2[i-1]-Ca*4*alpha*X_Ca1[i-1])
+X_Ca2[i]=X_Ca2[i-1]+dT*(Ca*4*alpha*X_Ca1[i-1]-2*beta*b*X_Ca2[i-1]+3*beta*b^2*X_Ca3[i-1]-Ca*3*alpha*X_Ca2[i-1])
+X_Ca3[i]=X_Ca3[i-1]+dT*(Ca*3*alpha*X_Ca2[i-1]-3*beta*b^2*X_Ca3[i-1]+4*beta*b^3*X_Ca4[i-1]-Ca*2*alpha*X_Ca3[i-1])
+X_Ca4[i]=X_Ca4[i-1]+dT*(Ca*2*alpha*X_Ca3[i-1]-4*beta*b^3*X_Ca4[i-1]+5*beta*b^4*X_Ca5[i-1]-Ca*1*alpha*X_Ca4[i-1])
+		X_Ca5[i]=X_Ca5[i-1]+dT*(Ca*1*alpha*X_Ca4[i-1]-5*beta*b^4*X_Ca5[i-1]-gama*X_Ca5[i-1])
+Y_Ca1[i]=Y_Ca1[i-1]+dT*(Ca*2*Yalpha*syt2[i-1]-Ybeta*Y_Ca1[i-1]+2*Ybeta*b*Y_Ca2[i-1]-Ca*4*Yalpha*Y_Ca1[i-1])
+		Y_Ca2[i]=Y_Ca2[i-1]+dT*(Ca*1*Yalpha*Y_Ca1[i-1]-2*Ybeta*b*Y_Ca2[i-1]-gama2*Y_Ca2[i-1])
+syt2[i]=syt2[i-1]+dT*(beta*X_Ca1[i-1]-5*alpha*syt2[i-1]*Ca+Ybeta*Y_Ca1[i-1]-2*Yalpha*syt2[i-1]*Ca)-dT*0.2*10^(-3)*syt2[i-1]
+//		Fuse[i]=(2.23*10^(-3)*syt2[i-1]+gama*X_Ca5[i-1]+gama2*Y_Ca2[i-1])*dT	//for KO
+		Fuse[i]=(0.417*10^(-3)*syt2[i-1]+gama*X_Ca5[i-1]+gama2*Y_Ca2[i-1])*dT	//for WT
+		Fused[i]=Fused[i-1]+Fuse[i]
+		Fuse[i]*=0.001/dT
+	while(i<6000)
+	wavestats/q fuse
+	peakrate[j]=V_max
+	peak_delay[j]=(V_maxloc-1000)*dT*1000
+	Ca_i[j]=Ca*1e6
+	print j
+	j+=1
+while(j<40)	
+end
+
+	
